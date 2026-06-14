@@ -8,7 +8,7 @@ import { cn, formatDateLabel } from "@/lib/utils";
 import { type Stage } from "@/lib/types";
 
 type Phase = "ALL" | Stage;
-type When = "ALL" | "UPCOMING" | "PAST";
+type When = "ALL" | "LIVE" | "UPCOMING" | "PAST";
 
 const PHASES: { value: Phase; label: string }[] = [
   { value: "ALL", label: "Toutes phases" },
@@ -22,6 +22,7 @@ const PHASES: { value: Phase; label: string }[] = [
 
 const WHEN: { value: When; label: string }[] = [
   { value: "ALL", label: "Tous" },
+  { value: "LIVE", label: "En cours" },
   { value: "UPCOMING", label: "À venir" },
   { value: "PAST", label: "Passés" },
 ];
@@ -38,8 +39,12 @@ export default function FixturesPage() {
     let matches = data?.matches ?? [];
 
     if (when === "PAST") matches = matches.filter((m) => m.status === "FINISHED");
+    if (when === "LIVE")
+      matches = matches.filter(
+        (m) => m.status === "LIVE" || m.status === "PAUSED"
+      );
     if (when === "UPCOMING")
-      matches = matches.filter((m) => m.status !== "FINISHED");
+      matches = matches.filter((m) => m.status === "SCHEDULED");
 
     if (group) {
       matches = matches.filter((m) => m.groupId === group);
@@ -155,7 +160,13 @@ export default function FixturesPage() {
           ))}
         </div>
       ) : (
-        <EmptyState message="Aucun match pour ces filtres." />
+        <EmptyState
+          message={
+            when === "LIVE"
+              ? "Aucun match en cours actuellement."
+              : "Aucun match pour ces filtres."
+          }
+        />
       )}
     </div>
   );
