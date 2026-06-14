@@ -14,7 +14,8 @@ export function useMatches() {
   return useQuery({
     queryKey: ["matches"],
     queryFn: () => get<{ matches: Match[]; source: string }>("/api/matches"),
-    refetchInterval: 30_000, // live refresh
+    refetchInterval: 20_000, // live refresh
+    staleTime: 10_000,
   });
 }
 

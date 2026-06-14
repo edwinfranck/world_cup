@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { withFallback } from "@/lib/data";
 
-// Revalidate on the server every 30s; live matches refresh fast enough,
-// finished/scheduled data barely changes — keeps us well under free-tier limits.
-export const revalidate = 30;
+// Refresh fast so live minute/score stay close to real time.
+export const revalidate = 15;
 
 export async function GET() {
   const { data, source } = await withFallback((p) => p.getMatches());
@@ -11,7 +10,7 @@ export async function GET() {
     { matches: data, source },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120",
+        "Cache-Control": "public, s-maxage=15, stale-while-revalidate=60",
       },
     }
   );

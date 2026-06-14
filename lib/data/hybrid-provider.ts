@@ -7,7 +7,7 @@ import {
   getSeedTeams,
 } from "@/lib/data/seed";
 import { fetchLiveResults, pairKey } from "@/lib/data/live-thesportsdb";
-import { fetchFifaMatchDetailByTeams } from "@/lib/data/match-detail-fifa";
+import { fetchFifaResults, fetchFifaDates } from "@/lib/data/match-detail-fifa";
 
 /**
  * Default provider: the REAL fixture schedule (dates, venues, groups, bracket)
@@ -20,76 +20,68 @@ import { fetchFifaMatchDetailByTeams } from "@/lib/data/match-detail-fifa";
 
 async function buildMatches(): Promise<Match[]> {
   const schedule = getSeedMatches();
-  let live: Awaited<ReturnType<typeof fetchLiveResults>>;
-  try {
-    live = await fetchLiveResults();
-  } catch {
-    return schedule;
-  }
-  if (live.size === 0) return schedule;
 
-  // A match can't realistically be "live" longer than this (90' + ET + pens +
-  // buffer). Used to override stale "live" statuses from the upstream feed.
+  // Two free sources, in parallel:
+  //  - FIFA calendar window = AUTHORITATIVE live status + minute + score
+  //  - TheSportsDB = providerEventId (for detail/stats) + fallback scores
+  const [fifa, tsdb, fifaDates] = await Promise.all([
+    fetchFifaResults().catch(() => new Map()),
+    fetchLiveResults().catch(() => new Map()),
+    fetchFifaDates().catch(() => new Map<number, string>()),
+  ]);
+
+  if (fifa.size === 0 && tsdb.size === 0 && fifaDates.size === 0) return schedule;
+
+  // A match can't realistically be "live" longer than this (90' + ET + pens).
   const MAX_LIVE_MS = 4 * 60 * 60 * 1000;
   const now = Date.now();
 
-  const overlaid = schedule.map((m) => {
-    if (m.home.code === "?" || m.away.code === "?") return m;
-    const r = live.get(pairKey(m.home.code, m.away.code));
-    if (!r) return m;
-    // Align scores to this fixture's home/away orientation.
-    const sameOrientation = r.homeCode === m.home.code;
-    const homeScore = sameOrientation ? r.homeScore : r.awayScore;
-    const awayScore = sameOrientation ? r.awayScore : r.homeScore;
+  return schedule.map((m) => {
+    const out = { ...m } as Match;
 
-    let status = r.status;
-    // Sanity guard: if the feed says LIVE/PAUSED but kickoff was long ago, the
-    // match is over — never show a day-old fixture as "in direct".
-    if (
-      (status === "LIVE" || status === "PAUSED") &&
-      now - new Date(m.utcDate).getTime() > MAX_LIVE_MS
-    ) {
-      status = "FINISHED";
+    // 0) Authoritative kickoff date/time from FIFA for EVERY match (our seed
+    // times are timezone-offset). Keyed by FIFA MatchNumber == our match id.
+    const fifaDate = fifaDates.get(Number(m.id));
+    if (fifaDate) out.utcDate = fifaDate;
+
+    if (m.home.code === "?" || m.away.code === "?") return out;
+    const key = pairKey(m.home.code, m.away.code);
+    const t = tsdb.get(key);
+    const f = fifa.get(key);
+    if (!t && !f) return out;
+
+    // 1) TheSportsDB layer (gives the event id for lineups/stats + fallback).
+    if (t) {
+      const same = t.homeCode === m.home.code;
+      out.status = t.status;
+      out.minute = t.minute;
+      out.homeScore = same ? t.homeScore : t.awayScore;
+      out.awayScore = same ? t.awayScore : t.homeScore;
+      out.providerEventId = t.eventId;
     }
 
-    return {
-      ...m,
-      status,
-      minute: status === "LIVE" || status === "PAUSED" ? r.minute : undefined,
-      homeScore,
-      awayScore,
-      providerEventId: r.eventId,
-    };
+    // 2) FIFA layer = authoritative status/score/clock/kickoff. Trust it fully.
+    if (f) {
+      const same = f.homeCode === m.home.code;
+      out.status = f.status;
+      out.minute = f.minute;
+      out.clock = f.clock;
+      if (f.date) out.utcDate = f.date; // our seed times can be offset
+      if (f.homeScore !== null) out.homeScore = same ? f.homeScore : f.awayScore;
+      if (f.awayScore !== null) out.awayScore = same ? f.awayScore : f.homeScore;
+    } else if (
+      // 3) Stale guard ONLY for TheSportsDB-only data (no FIFA truth here):
+      // a fixture whose kickoff was long ago can't still be "live".
+      (out.status === "LIVE" || out.status === "PAUSED") &&
+      now - new Date(out.utcDate).getTime() > MAX_LIVE_MS
+    ) {
+      out.status = "FINISHED";
+      out.clock = undefined;
+      out.minute = undefined;
+    }
+
+    return out;
   });
-
-  // Enrich currently-live matches with FIFA's exact clock + authoritative
-  // status/score (FIFA also tells us if the match has actually finished).
-  const liveMatches = overlaid.filter(
-    (m) => m.status === "LIVE" || m.status === "PAUSED"
-  );
-  await Promise.all(
-    liveMatches.map(async (m) => {
-      try {
-        const f = await fetchFifaMatchDetailByTeams(m.home.code, m.away.code);
-        if (!f) return;
-        if (f.finished) {
-          m.status = "FINISHED";
-          m.clock = undefined;
-          m.minute = undefined;
-        } else if (f.live && f.clock) {
-          m.clock = f.clock;
-          const min = parseInt(f.clock, 10);
-          if (!Number.isNaN(min)) m.minute = min;
-        }
-        if (f.homeScore !== null) m.homeScore = f.homeScore;
-        if (f.awayScore !== null) m.awayScore = f.awayScore;
-      } catch {
-        // keep TheSportsDB values
-      }
-    })
-  );
-
-  return overlaid;
 }
 
 export const hybridProvider: DataProvider = {

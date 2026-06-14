@@ -2,8 +2,30 @@ import type {
   LineupPlayer,
   MatchEvent,
   MatchLineups,
+  MatchStatus,
   TeamLineup,
 } from "@/lib/types";
+
+/**
+ * FIFA MatchStatus codes (observed): 0 = finished (full time), 1 = not started,
+ * 3 = live / in progress. MatchTime carries the clock ("29'", "90'+4'").
+ */
+function fifaStatus(
+  ms: number | undefined,
+  matchTime: string | undefined
+): { status: MatchStatus; minute?: number; clock?: string } {
+  if (ms === 0) return { status: "FINISHED" };
+  if (ms === 3) {
+    const clock = matchTime || undefined;
+    const min = clock ? parseInt(clock, 10) : NaN;
+    return {
+      status: clock && /half\s*time|^ht$/i.test(clock) ? "PAUSED" : "LIVE",
+      clock,
+      minute: Number.isNaN(min) ? undefined : min,
+    };
+  }
+  return { status: "SCHEDULED" };
+}
 
 /**
  * Match detail from FIFA's own public JSON API (api.fifa.com/api/v3) — keyless
@@ -64,12 +86,80 @@ async function fifaFetch<T>(path: string, revalidate: number): Promise<T | null>
 interface FifaCalMatch {
   IdMatch?: string;
   IdStage?: string;
-  Home?: { IdCountry?: string };
-  Away?: { IdCountry?: string };
+  MatchNumber?: number;
+  MatchStatus?: number;
+  MatchTime?: string;
+  Date?: string;
+  Home?: { IdCountry?: string; Score?: number | null };
+  Away?: { IdCountry?: string; Score?: number | null };
+}
+
+const FULL_CALENDAR = `/calendar/matches?idCompetition=${COMPETITION}&idSeason=${SEASON}&count=150&from=2026-06-01T00:00:00Z&to=2026-07-31T00:00:00Z`;
+
+/**
+ * Authoritative kickoff date/time for EVERY match, keyed by FIFA MatchNumber
+ * (which equals our schedule's match id 1..104). Our seed times are timezone
+ * -offset, so we override them all with these.
+ */
+export async function fetchFifaDates(): Promise<Map<number, string>> {
+  const data = await fifaFetch<{ Results?: FifaCalMatch[] }>(FULL_CALENDAR, 1800);
+  const map = new Map<number, string>();
+  for (const m of data?.Results ?? []) {
+    if (m.MatchNumber && m.Date) map.set(m.MatchNumber, m.Date);
+  }
+  return map;
 }
 
 function pairKey(a: string, b: string) {
   return [a, b].sort().join("-");
+}
+
+export interface FifaResult {
+  homeCode: string;
+  awayCode: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  status: MatchStatus;
+  minute?: number;
+  clock?: string;
+  date?: string;
+}
+
+function dayStr(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+/**
+ * Authoritative scores + LIVE status + minute for matches in a window around
+ * now, straight from FIFA's calendar (one call). Keyed by sorted code pair.
+ * The window is quantised to whole days so the URL (and cache) is stable.
+ */
+export async function fetchFifaResults(): Promise<Map<string, FifaResult>> {
+  const now = Date.now();
+  const from = `${dayStr(now - 6 * 86400000)}T00:00:00Z`;
+  const to = `${dayStr(now + 4 * 86400000)}T00:00:00Z`;
+  const data = await fifaFetch<{ Results?: FifaCalMatch[] }>(
+    `/calendar/matches?idCompetition=${COMPETITION}&idSeason=${SEASON}&count=80&from=${from}&to=${to}`,
+    15
+  );
+  const map = new Map<string, FifaResult>();
+  for (const m of data?.Results ?? []) {
+    const h = m.Home?.IdCountry;
+    const a = m.Away?.IdCountry;
+    if (!h || !a) continue;
+    const st = fifaStatus(m.MatchStatus, m.MatchTime || undefined);
+    map.set(pairKey(h, a), {
+      homeCode: h,
+      awayCode: a,
+      homeScore: m.Home?.Score ?? null,
+      awayScore: m.Away?.Score ?? null,
+      status: st.status,
+      minute: st.minute,
+      clock: st.clock,
+      date: m.Date || undefined,
+    });
+  }
+  return map;
 }
 
 interface CalRef {
@@ -245,18 +335,15 @@ export async function fetchFifaMatchDetailByTeams(
   const hasLineups =
     lineups.home.starters.length > 0 || lineups.away.starters.length > 0;
 
-  const finished = detail.MatchStatus === 3;
-  const clock = detail.MatchTime || undefined;
-  const live =
-    !finished && !!clock && /\d/.test(clock) && clock !== "0'";
+  const st = fifaStatus(detail.MatchStatus, detail.MatchTime || undefined);
 
   return {
     events,
     lineups: hasLineups ? lineups : undefined,
-    clock,
+    clock: st.clock,
     homeScore: ourHome.Score ?? null,
     awayScore: ourAway.Score ?? null,
-    finished,
-    live,
+    finished: st.status === "FINISHED",
+    live: st.status === "LIVE" || st.status === "PAUSED",
   };
 }

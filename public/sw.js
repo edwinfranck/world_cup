@@ -4,7 +4,7 @@
  *  - /api/* : network-first with a short timeout, fall back to last cached response
  *    so groups/matches/favorites stay viewable without connection.
  */
-const CACHE = "wc2026-v1";
+const CACHE = "wc2026-v2";
 const APP_SHELL = ["/", "/fixtures", "/groups", "/bracket", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -29,6 +29,12 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // NEVER cache API calls — live scores/minute must always be fresh from network.
+  if (url.pathname.startsWith("/api/")) {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   event.respondWith(
     fetch(request)

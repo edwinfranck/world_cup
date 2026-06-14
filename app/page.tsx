@@ -5,6 +5,7 @@ import { ChevronRight, Heart, Radio } from "lucide-react";
 import { useMatches, useGroups } from "@/lib/api";
 import { useAppStore, useHydrated } from "@/lib/store";
 import { MatchCard } from "@/components/match-card";
+import { LiveCard } from "@/components/live-card";
 import { StandingsTable } from "@/components/standings-table";
 import { SectionHeader } from "@/components/ui/card";
 import { CardListSkeleton, EmptyState } from "@/components/ui/states";
@@ -86,7 +87,7 @@ export default function DashboardPage() {
         ) : live.length ? (
           <div className="space-y-2">
             {live.map((m) => (
-              <MatchCard key={m.id} match={m} />
+              <LiveCard key={m.id} match={m} />
             ))}
           </div>
         ) : (
