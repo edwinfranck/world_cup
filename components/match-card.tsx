@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { TeamFlag } from "@/components/team-flag";
 import { AddToCalendar } from "@/components/add-to-calendar";
-import { cn, formatKickoff } from "@/lib/utils";
+import { cn, formatShortDateTime } from "@/lib/utils";
 import type { Match } from "@/lib/types";
 
 function StatusPill({ match }: { match: Match }) {
   if (match.status === "LIVE" || match.status === "PAUSED") {
+    const label =
+      match.status === "PAUSED"
+        ? "Mi-temps"
+        : match.clock || (match.minute ? `${match.minute}'` : "Live");
     return (
       <span className="inline-flex items-center gap-1 rounded-none bg-live/15 px-1.5 py-0.5 text-[11px] font-bold text-live">
         <span className="h-1.5 w-1.5 rounded-none bg-live animate-pulse-live" />
-        {match.clock || (match.minute ? `${match.minute}'` : "LIVE")}
+        {label}
       </span>
     );
   }
@@ -22,7 +26,7 @@ function StatusPill({ match }: { match: Match }) {
   }
   return (
     <span className="rounded-none bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold text-muted">
-      {formatKickoff(match.utcDate)}
+      {formatShortDateTime(match.utcDate)}
     </span>
   );
 }

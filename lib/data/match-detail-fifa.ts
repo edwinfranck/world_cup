@@ -17,12 +17,12 @@ function fifaStatus(
   if (ms === 0) return { status: "FINISHED" };
   if (ms === 3) {
     const clock = matchTime || undefined;
-    const min = clock ? parseInt(clock, 10) : NaN;
-    return {
-      status: clock && /half\s*time|^ht$/i.test(clock) ? "PAUSED" : "LIVE",
-      clock,
-      minute: Number.isNaN(min) ? undefined : min,
-    };
+    // Live but no running clock (FIFA returns an empty MatchTime) == half-time.
+    if (!clock || /half\s*time|^ht$|mi-?temps/i.test(clock)) {
+      return { status: "PAUSED", clock: undefined };
+    }
+    const min = parseInt(clock, 10);
+    return { status: "LIVE", clock, minute: Number.isNaN(min) ? undefined : min };
   }
   return { status: "SCHEDULED" };
 }

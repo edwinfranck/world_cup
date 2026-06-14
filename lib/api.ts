@@ -15,6 +15,7 @@ export function useMatches() {
     queryKey: ["matches"],
     queryFn: () => get<{ matches: Match[]; source: string }>("/api/matches"),
     refetchInterval: 20_000, // live refresh
+    refetchIntervalInBackground: true,
     staleTime: 10_000,
   });
 }
@@ -24,7 +25,9 @@ export function useMatch(id: string) {
     queryKey: ["match", id],
     queryFn: () =>
       get<{ match: Match; source: string }>(`/api/matches/${id}`),
-    refetchInterval: 30_000,
+    refetchInterval: 20_000,
+    refetchIntervalInBackground: true,
+    staleTime: 10_000,
     enabled: !!id,
   });
 }

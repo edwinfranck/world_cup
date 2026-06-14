@@ -8,7 +8,10 @@ import { STAGE_LABELS, type Match } from "@/lib/types";
  * minute, both teams, and a clear "follow live" call to action → match detail.
  */
 export function LiveCard({ match }: { match: Match }) {
-  const clock = match.clock || (match.minute ? `${match.minute}'` : "DIRECT");
+  const clock =
+    match.status === "PAUSED"
+      ? "Mi-temps"
+      : match.clock || (match.minute ? `${match.minute}'` : "Direct");
   return (
     <Link
       href={`/match/${match.id}`}

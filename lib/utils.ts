@@ -24,6 +24,16 @@ export function formatDateLabel(iso: string, locale = "fr-FR") {
   }).format(d);
 }
 
+/** Compact date + time, e.g. "14/06 · 23:00". */
+export function formatShortDateTime(iso: string, locale = "fr-FR") {
+  const d = new Date(iso);
+  const date = new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "2-digit",
+  }).format(d);
+  return `${date} · ${formatKickoff(iso, locale)}`;
+}
+
 export function isSameDay(a: string | Date, b: string | Date) {
   const da = new Date(a);
   const db = new Date(b);

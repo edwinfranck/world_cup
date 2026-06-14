@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Heart, Radio } from "lucide-react";
+import { ChevronRight, Radio } from "lucide-react";
 import { useMatches, useGroups } from "@/lib/api";
 import { useAppStore, useHydrated } from "@/lib/store";
 import { MatchCard } from "@/components/match-card";
@@ -18,21 +18,26 @@ export default function DashboardPage() {
   const favoriteTeams = useAppStore((s) => s.favoriteTeams);
 
   const matches = data?.matches ?? [];
-  const favMatches =
+  const nowMs = Date.now();
+  // Single most-relevant match for favourites: live > next upcoming > last played.
+  const favAll =
     hydrated && favoriteTeams.length
-      ? matches
-          .filter(
-            (m) =>
-              favoriteTeams.includes(m.home.id) ||
-              favoriteTeams.includes(m.away.id)
-          )
-          .sort((a, b) => {
-            const rank = (s: string) =>
-              s === "LIVE" || s === "PAUSED" ? 0 : s === "SCHEDULED" ? 1 : 2;
-            return rank(a.status) - rank(b.status);
-          })
-          .slice(0, 4)
+      ? matches.filter(
+          (m) =>
+            favoriteTeams.includes(m.home.id) ||
+            favoriteTeams.includes(m.away.id)
+        )
       : [];
+  const favNext =
+    favAll.find((m) => m.status === "LIVE" || m.status === "PAUSED") ??
+    favAll.find(
+      (m) =>
+        m.status === "SCHEDULED" &&
+        new Date(m.utcDate).getTime() >= nowMs - 3 * 3600_000
+    ) ??
+    [...favAll].reverse().find((m) => m.status === "FINISHED");
+  const favLink =
+    favoriteTeams.length === 1 ? `/teams/${favoriteTeams[0]}` : "/favorites";
   const live = matches.filter(
     (m) => m.status === "LIVE" || m.status === "PAUSED"
   );
@@ -52,24 +57,24 @@ export default function DashboardPage() {
     <div className="space-y-6 animate-fade-up">
       <Hero liveCount={live.length} />
 
-      {favMatches.length > 0 && (
+      {favNext && (
         <section>
           <SectionHeader
-            title="Mes favoris"
+            title="Mon équipe · prochain match"
             action={
               <Link
-                href="/favorites"
-                className="inline-flex items-center text-xs font-semibold text-live"
+                href={favLink}
+                className="inline-flex items-center text-xs font-semibold text-primary"
               >
-                <Heart size={13} className="mr-1" /> Gérer
+                Tous les matchs <ChevronRight size={14} />
               </Link>
             }
           />
-          <div className="space-y-2">
-            {favMatches.map((m) => (
-              <MatchCard key={m.id} match={m} />
-            ))}
-          </div>
+          {favNext.status === "LIVE" || favNext.status === "PAUSED" ? (
+            <LiveCard match={favNext} />
+          ) : (
+            <MatchCard match={favNext} />
+          )}
         </section>
       )}
 

@@ -65,11 +65,13 @@ function Scoreboard({ match }: { match: Match }) {
     match.status === "LIVE" ||
     match.status === "PAUSED";
   const statusText =
-    match.status === "LIVE" || match.status === "PAUSED"
-      ? match.clock || (match.minute ? `${match.minute}'` : "EN DIRECT")
-      : match.status === "FINISHED"
-        ? "Terminé"
-        : `${formatDateLabel(match.utcDate)} · ${formatKickoff(match.utcDate)}`;
+    match.status === "PAUSED"
+      ? "Mi-temps"
+      : match.status === "LIVE"
+        ? match.clock || (match.minute ? `${match.minute}'` : "EN DIRECT")
+        : match.status === "FINISHED"
+          ? "Terminé"
+          : `${formatDateLabel(match.utcDate)} · ${formatKickoff(match.utcDate)}`;
 
   return (
     <div className="rounded-none border border-border bg-surface p-5">
