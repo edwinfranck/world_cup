@@ -84,11 +84,6 @@ export default function LeaderboardPage() {
           );
         })}
       </div>
-
-      <p className="rounded-none border border-dashed border-border bg-surface/50 p-3 text-center text-[11px] text-muted">
-        Classement local avec rivaux simulés. Un classement mondial réel
-        nécessite un compte + serveur (NextAuth + base de données).
-      </p>
     </div>
   );
 }

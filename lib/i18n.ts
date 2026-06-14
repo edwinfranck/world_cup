@@ -25,8 +25,8 @@ export function useT() {
   return (key: string) => DICT[key]?.[locale] ?? DICT[key]?.fr ?? key;
 }
 
-export const LOCALES: { value: Locale; label: string }[] = [
-  { value: "fr", label: "FR" },
-  { value: "en", label: "EN" },
-  { value: "es", label: "ES" },
+export const LOCALES: { value: Locale; label: string; name: string }[] = [
+  { value: "fr", label: "FR", name: "Français" },
+  { value: "en", label: "EN", name: "English" },
+  { value: "es", label: "ES", name: "Español" },
 ];

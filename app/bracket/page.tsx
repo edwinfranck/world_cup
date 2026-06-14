@@ -5,6 +5,7 @@ import { Dices, RotateCcw, Sparkles, Trophy } from "lucide-react";
 import { useGroups, useTeams } from "@/lib/api";
 import { useAppStore, useHydrated } from "@/lib/store";
 import { TeamFlag } from "@/components/team-flag";
+import { Select } from "@/components/ui/select";
 import { CardListSkeleton } from "@/components/ui/states";
 import {
   KO_MATCHES,
@@ -77,21 +78,17 @@ export default function BracketPage() {
 
       <div className="flex items-center gap-2">
         <label className="text-xs font-semibold text-muted">Parcours :</label>
-        <select
-          aria-label="Choisir une équipe pour voir son parcours"
+        <Select
+          ariaLabel="Choisir une équipe pour voir son parcours"
           value={pathTeam}
-          onChange={(e) => setPathTeam(e.target.value)}
-          className="flex-1 border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-gold"
-        >
-          <option value="">— Choisir une équipe —</option>
-          {[...teams]
+          onChange={setPathTeam}
+          placeholder="— Choisir une équipe —"
+          searchable
+          className="flex-1"
+          options={[...teams]
             .sort((a, b) => a.name.localeCompare(b.name))
-            .map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-        </select>
+            .map((t) => ({ value: t.id, label: t.name }))}
+        />
       </div>
       {pathTeam && !path.size && (
         <p className="text-xs text-muted">

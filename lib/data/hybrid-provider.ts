@@ -28,6 +28,11 @@ async function buildMatches(): Promise<Match[]> {
   }
   if (live.size === 0) return schedule;
 
+  // A match can't realistically be "live" longer than this (90' + ET + pens +
+  // buffer). Used to override stale "live" statuses from the upstream feed.
+  const MAX_LIVE_MS = 4 * 60 * 60 * 1000;
+  const now = Date.now();
+
   const overlaid = schedule.map((m) => {
     if (m.home.code === "?" || m.away.code === "?") return m;
     const r = live.get(pairKey(m.home.code, m.away.code));
@@ -36,18 +41,29 @@ async function buildMatches(): Promise<Match[]> {
     const sameOrientation = r.homeCode === m.home.code;
     const homeScore = sameOrientation ? r.homeScore : r.awayScore;
     const awayScore = sameOrientation ? r.awayScore : r.homeScore;
+
+    let status = r.status;
+    // Sanity guard: if the feed says LIVE/PAUSED but kickoff was long ago, the
+    // match is over — never show a day-old fixture as "in direct".
+    if (
+      (status === "LIVE" || status === "PAUSED") &&
+      now - new Date(m.utcDate).getTime() > MAX_LIVE_MS
+    ) {
+      status = "FINISHED";
+    }
+
     return {
       ...m,
-      status: r.status,
-      minute: r.minute,
+      status,
+      minute: status === "LIVE" || status === "PAUSED" ? r.minute : undefined,
       homeScore,
       awayScore,
       providerEventId: r.eventId,
     };
   });
 
-  // Enrich currently-live matches with FIFA's exact clock (e.g. "67'"),
-  // which TheSportsDB doesn't provide. Few matches are live at once.
+  // Enrich currently-live matches with FIFA's exact clock + authoritative
+  // status/score (FIFA also tells us if the match has actually finished).
   const liveMatches = overlaid.filter(
     (m) => m.status === "LIVE" || m.status === "PAUSED"
   );
@@ -55,13 +71,18 @@ async function buildMatches(): Promise<Match[]> {
     liveMatches.map(async (m) => {
       try {
         const f = await fetchFifaMatchDetailByTeams(m.home.code, m.away.code);
-        if (f?.clock) {
+        if (!f) return;
+        if (f.finished) {
+          m.status = "FINISHED";
+          m.clock = undefined;
+          m.minute = undefined;
+        } else if (f.live && f.clock) {
           m.clock = f.clock;
           const min = parseInt(f.clock, 10);
           if (!Number.isNaN(min)) m.minute = min;
         }
-        if (f && f.homeScore !== null) m.homeScore = f.homeScore;
-        if (f && f.awayScore !== null) m.awayScore = f.awayScore;
+        if (f.homeScore !== null) m.homeScore = f.homeScore;
+        if (f.awayScore !== null) m.awayScore = f.awayScore;
       } catch {
         // keep TheSportsDB values
       }

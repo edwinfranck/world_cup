@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Plus, Trophy, User, X } from "lucide-react";
 import { useGroups, useSquad, useTeams } from "@/lib/api";
 import { useAppStore, useHydrated } from "@/lib/store";
+import { Select } from "@/components/ui/select";
 import { CardListSkeleton } from "@/components/ui/states";
 import { cn } from "@/lib/utils";
 import type { Standing } from "@/lib/types";
@@ -98,21 +99,16 @@ export default function FantasyPage() {
         <label className="mb-1 block text-xs font-semibold text-muted">
           Ajouter des joueurs d&apos;une équipe
         </label>
-        <select
-          aria-label="Choisir une équipe"
+        <Select
+          ariaLabel="Choisir une équipe"
           value={team}
-          onChange={(e) => setTeam(e.target.value)}
-          className="w-full border border-border bg-surface px-2 py-2 text-sm outline-none focus:border-primary"
-        >
-          <option value="">— Choisir une équipe —</option>
-          {[...teams]
+          onChange={setTeam}
+          placeholder="— Choisir une équipe —"
+          searchable
+          options={[...teams]
             .sort((a, b) => a.name.localeCompare(b.name))
-            .map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-        </select>
+            .map((t) => ({ value: t.id, label: t.name }))}
+        />
       </div>
 
       {team && (

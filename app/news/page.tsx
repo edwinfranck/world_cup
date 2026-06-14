@@ -45,11 +45,6 @@ export default function NewsPage() {
           </article>
         ))}
       </div>
-
-      <p className="rounded-none border border-dashed border-border bg-surface/50 p-4 text-center text-xs text-muted">
-        L&apos;agrégation d&apos;actualités en temps réel (flux RSS / API presse)
-        sera branchée dans une prochaine itération.
-      </p>
     </div>
   );
 }

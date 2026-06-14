@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Search, Trophy } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { LanguageToggle } from "@/components/language-toggle";
+import { LanguageDropdown } from "@/components/language-dropdown";
 import { TeamBanner } from "@/components/layout/team-banner";
 
 export function TopBar() {
@@ -24,7 +24,7 @@ export function TopBar() {
           >
             <Search size={18} />
           </Link>
-          <LanguageToggle />
+          <LanguageDropdown />
           <ThemeToggle />
         </div>
       </div>

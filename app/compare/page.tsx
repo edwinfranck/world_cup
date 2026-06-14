@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useGroups, useSquad, useTeams } from "@/lib/api";
 import { TeamFlag } from "@/components/team-flag";
+import { Select } from "@/components/ui/select";
 import { CardListSkeleton } from "@/components/ui/states";
 import { cn } from "@/lib/utils";
 import type { Standing, Team } from "@/lib/types";
@@ -52,21 +53,16 @@ function TeamSelect({
   label: string;
 }) {
   return (
-    <select
-      aria-label={label}
+    <Select
+      ariaLabel={label}
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full border border-border bg-surface px-2 py-2 text-sm outline-none focus:border-primary"
-    >
-      <option value="">{label}</option>
-      {[...teams]
+      onChange={onChange}
+      placeholder={label}
+      searchable
+      options={[...teams]
         .sort((a, b) => a.name.localeCompare(b.name))
-        .map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.name}
-          </option>
-        ))}
-    </select>
+        .map((t) => ({ value: t.id, label: t.name }))}
+    />
   );
 }
 
@@ -214,19 +210,17 @@ function PlayerPicker({ code }: { code: string }) {
 
   return (
     <div className="border border-border bg-surface p-3">
-      <select
-        aria-label="Choisir un joueur"
+      <Select
+        ariaLabel="Choisir un joueur"
         value={sel}
-        onChange={(e) => setSel(e.target.value)}
-        className="mb-2 w-full border border-border bg-surface-2 px-2 py-1.5 text-xs outline-none focus:border-primary"
-      >
-        <option value="">— Joueur —</option>
-        {players.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
+        onChange={setSel}
+        placeholder="— Joueur —"
+        searchable
+        size="sm"
+        triggerClassName="bg-surface-2"
+        className="mb-2"
+        options={players.map((p) => ({ value: p.id, label: p.name }))}
+      />
       {player && (
         <div className="flex flex-col items-center gap-1 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
