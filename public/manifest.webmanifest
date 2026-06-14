@@ -1,0 +1,20 @@
+{
+  "name": "Mondial 2026 — Live",
+  "short_name": "Mondial 26",
+  "description": "Coupe du Monde FIFA 2026 en direct : scores, groupes, calendrier, stats.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0e17",
+  "theme_color": "#0a0e17",
+  "lang": "fr",
+  "categories": ["sports", "news"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
