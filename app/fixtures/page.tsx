@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useMatches } from "@/lib/api";
 import { MatchCard } from "@/components/match-card";
-import { AddToCalendar } from "@/components/add-to-calendar";
 import { CardListSkeleton, EmptyState } from "@/components/ui/states";
 import { cn, formatDateLabel } from "@/lib/utils";
 import { type Stage } from "@/lib/types";
@@ -149,14 +148,7 @@ export default function FixturesPage() {
               </h2>
               <div className="space-y-2">
                 {matches.map((m) => (
-                  <div key={m.id} className="flex items-stretch gap-2">
-                    <div className="min-w-0 flex-1">
-                      <MatchCard match={m} />
-                    </div>
-                    <div className="flex items-center">
-                      <AddToCalendar match={m} />
-                    </div>
-                  </div>
+                  <MatchCard key={m.id} match={m} />
                 ))}
               </div>
             </section>

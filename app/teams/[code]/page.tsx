@@ -7,7 +7,6 @@ import { useMatches, useTeams, useGroups } from "@/lib/api";
 import { TeamFlag } from "@/components/team-flag";
 import { FavoriteTeamButton } from "@/components/favorite-button";
 import { MatchCard } from "@/components/match-card";
-import { AddToCalendar } from "@/components/add-to-calendar";
 import { SquadList } from "@/components/squad-list";
 import { Skeleton, EmptyState } from "@/components/ui/states";
 import type { Match } from "@/lib/types";
@@ -114,14 +113,7 @@ export default function TeamPage({
           </h2>
           <div className="space-y-2">
             {upcoming.map((m) => (
-              <div key={m.id} className="flex items-stretch gap-2">
-                <div className="min-w-0 flex-1">
-                  <MatchCard match={m} />
-                </div>
-                <div className="flex items-center">
-                  <AddToCalendar match={m} />
-                </div>
-              </div>
+              <MatchCard key={m.id} match={m} />
             ))}
           </div>
         </section>

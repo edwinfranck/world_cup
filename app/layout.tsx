@@ -5,6 +5,7 @@ import { Providers } from "./providers";
 import { TopBar } from "@/components/layout/top-bar";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { ServiceWorkerRegister } from "@/components/sw-register";
+import { ThemeAccent } from "@/components/theme-accent";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
@@ -42,6 +43,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <Providers>
+          <ThemeAccent />
           <TopBar />
           <main className="mx-auto w-full max-w-3xl flex-1 px-3 pb-24 pt-3 sm:px-4">
             {children}

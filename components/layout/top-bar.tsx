@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Search, Trophy } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
+import { TeamBanner } from "@/components/layout/team-banner";
 
 export function TopBar() {
   return (
@@ -27,6 +28,7 @@ export function TopBar() {
           <ThemeToggle />
         </div>
       </div>
+      <TeamBanner />
     </header>
   );
 }
