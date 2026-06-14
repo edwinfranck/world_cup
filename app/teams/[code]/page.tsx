@@ -7,6 +7,7 @@ import { useMatches, useTeams, useGroups } from "@/lib/api";
 import { TeamFlag } from "@/components/team-flag";
 import { FavoriteTeamButton } from "@/components/favorite-button";
 import { MatchCard } from "@/components/match-card";
+import { AddToCalendar } from "@/components/add-to-calendar";
 import { SquadList } from "@/components/squad-list";
 import { Skeleton, EmptyState } from "@/components/ui/states";
 import type { Match } from "@/lib/types";
@@ -35,6 +36,8 @@ export default function TeamPage({
   // Form from finished matches (most recent 5).
   const finished = matches.filter((m) => m.status === "FINISHED");
   const form = finished.slice(-5).map((m) => resultFor(m, code));
+  const results = [...finished].reverse();
+  const upcoming = matches.filter((m) => m.status !== "FINISHED");
 
   return (
     <div className="space-y-4 animate-fade-up">
@@ -91,16 +94,38 @@ export default function TeamPage({
         <SquadList code={team.id} />
       </section>
 
-      <section>
-        <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted">
-          Matchs
-        </h2>
-        <div className="space-y-2">
-          {matches.map((m) => (
-            <MatchCard key={m.id} match={m} />
-          ))}
-        </div>
-      </section>
+      {results.length > 0 && (
+        <section>
+          <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted">
+            Résultats
+          </h2>
+          <div className="space-y-2">
+            {results.map((m) => (
+              <MatchCard key={m.id} match={m} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {upcoming.length > 0 && (
+        <section>
+          <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted">
+            À venir
+          </h2>
+          <div className="space-y-2">
+            {upcoming.map((m) => (
+              <div key={m.id} className="flex items-stretch gap-2">
+                <div className="min-w-0 flex-1">
+                  <MatchCard match={m} />
+                </div>
+                <div className="flex items-center">
+                  <AddToCalendar match={m} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

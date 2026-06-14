@@ -7,6 +7,7 @@ import {
   getSeedTeams,
 } from "@/lib/data/seed";
 import { fetchLiveResults, pairKey } from "@/lib/data/live-thesportsdb";
+import { fetchFifaMatchDetailByTeams } from "@/lib/data/match-detail-fifa";
 
 /**
  * Default provider: the REAL fixture schedule (dates, venues, groups, bracket)
@@ -27,7 +28,7 @@ async function buildMatches(): Promise<Match[]> {
   }
   if (live.size === 0) return schedule;
 
-  return schedule.map((m) => {
+  const overlaid = schedule.map((m) => {
     if (m.home.code === "?" || m.away.code === "?") return m;
     const r = live.get(pairKey(m.home.code, m.away.code));
     if (!r) return m;
@@ -44,6 +45,30 @@ async function buildMatches(): Promise<Match[]> {
       providerEventId: r.eventId,
     };
   });
+
+  // Enrich currently-live matches with FIFA's exact clock (e.g. "67'"),
+  // which TheSportsDB doesn't provide. Few matches are live at once.
+  const liveMatches = overlaid.filter(
+    (m) => m.status === "LIVE" || m.status === "PAUSED"
+  );
+  await Promise.all(
+    liveMatches.map(async (m) => {
+      try {
+        const f = await fetchFifaMatchDetailByTeams(m.home.code, m.away.code);
+        if (f?.clock) {
+          m.clock = f.clock;
+          const min = parseInt(f.clock, 10);
+          if (!Number.isNaN(min)) m.minute = min;
+        }
+        if (f && f.homeScore !== null) m.homeScore = f.homeScore;
+        if (f && f.awayScore !== null) m.awayScore = f.awayScore;
+      } catch {
+        // keep TheSportsDB values
+      }
+    })
+  );
+
+  return overlaid;
 }
 
 export const hybridProvider: DataProvider = {

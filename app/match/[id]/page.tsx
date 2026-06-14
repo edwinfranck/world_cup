@@ -9,9 +9,12 @@ import { PredictionPanel } from "@/components/prediction-panel";
 import { FavoriteMatchButton } from "@/components/favorite-button";
 import { MatchTimeline } from "@/components/match-timeline";
 import { Lineups } from "@/components/lineups";
+import { MotmVote } from "@/components/motm-vote";
+import { AddToCalendar } from "@/components/add-to-calendar";
+import { NotifyButton } from "@/components/notify-button";
 import { Skeleton } from "@/components/ui/states";
 import { formatDateLabel, formatKickoff } from "@/lib/utils";
-import { STAGE_LABELS, type Match, type MatchStats } from "@/lib/types";
+import { STAGE_LABELS, type Match, type StatRow } from "@/lib/types";
 
 export default function MatchPage({
   params,
@@ -39,10 +42,17 @@ export default function MatchPage({
       ) : (
         <>
           <Scoreboard match={match} />
+          {match.status === "SCHEDULED" && (
+            <div className="grid grid-cols-2 gap-2">
+              <AddToCalendar match={match} variant="full" />
+              <NotifyButton match={match} />
+            </div>
+          )}
           <MatchTimeline match={match} />
           <PredictionPanel match={match} />
           <Lineups match={match} />
-          <StatsBlock stats={match.stats} />
+          <MotmVote match={match} />
+          <StatsBlock rows={match.statRows} />
         </>
       )}
     </div>
@@ -56,9 +66,7 @@ function Scoreboard({ match }: { match: Match }) {
     match.status === "PAUSED";
   const statusText =
     match.status === "LIVE" || match.status === "PAUSED"
-      ? match.minute
-        ? `${match.minute}'`
-        : "EN DIRECT"
+      ? match.clock || (match.minute ? `${match.minute}'` : "EN DIRECT")
       : match.status === "FINISHED"
         ? "Terminé"
         : `${formatDateLabel(match.utcDate)} · ${formatKickoff(match.utcDate)}`;
@@ -85,10 +93,13 @@ function Scoreboard({ match }: { match: Match }) {
           <div
             className={
               match.status === "LIVE" || match.status === "PAUSED"
-                ? "mt-1 text-xs font-bold text-live"
+                ? "mt-1 flex items-center justify-center gap-1 text-xs font-bold text-live"
                 : "mt-1 text-xs font-semibold text-muted"
             }
           >
+            {(match.status === "LIVE" || match.status === "PAUSED") && (
+              <span className="h-1.5 w-1.5 rounded-none bg-live animate-pulse-live" />
+            )}
             {statusText}
           </div>
         </div>
@@ -112,24 +123,11 @@ function TeamSide({ team }: { team: Match["home"] }) {
   );
 }
 
-const STAT_ROWS: { key: keyof MatchStats; label: string; pair: [keyof MatchStats, keyof MatchStats] }[] =
-  [
-    { key: "possessionHome", label: "Possession (%)", pair: ["possessionHome", "possessionAway"] },
-    { key: "shotsHome", label: "Tirs", pair: ["shotsHome", "shotsAway"] },
-    { key: "shotsOnTargetHome", label: "Tirs cadrés", pair: ["shotsOnTargetHome", "shotsOnTargetAway"] },
-    { key: "cornersHome", label: "Corners", pair: ["cornersHome", "cornersAway"] },
-    { key: "foulsHome", label: "Fautes", pair: ["foulsHome", "foulsAway"] },
-  ];
-
-function StatsBlock({ stats }: { stats?: MatchStats }) {
-  if (!stats) {
+function StatsBlock({ rows }: { rows?: StatRow[] }) {
+  if (!rows || !rows.length) {
     return (
       <div className="rounded-none border border-dashed border-border bg-surface/50 p-4 text-center text-sm text-muted">
         Statistiques détaillées indisponibles pour ce match.
-        <br />
-        <span className="text-xs">
-          (Disponibles via un fournisseur de données connecté.)
-        </span>
       </div>
     );
   }
@@ -139,25 +137,23 @@ function StatsBlock({ stats }: { stats?: MatchStats }) {
         Statistiques
       </h2>
       <div className="space-y-3">
-        {STAT_ROWS.map((row) => {
-          const h = Number(stats[row.pair[0]] ?? 0);
-          const a = Number(stats[row.pair[1]] ?? 0);
-          const total = h + a || 1;
+        {rows.map((row) => {
+          const total = row.home + row.away || 1;
           return (
             <div key={row.label}>
               <div className="mb-1 flex justify-between text-xs font-semibold">
-                <span>{h}</span>
+                <span>{row.home}</span>
                 <span className="text-muted">{row.label}</span>
-                <span>{a}</span>
+                <span>{row.away}</span>
               </div>
               <div className="flex h-1.5 overflow-hidden rounded-none bg-surface-2">
                 <div
                   className="bg-primary"
-                  style={{ width: `${(h / total) * 100}%` }}
+                  style={{ width: `${(row.home / total) * 100}%` }}
                 />
                 <div
                   className="bg-accent"
-                  style={{ width: `${(a / total) * 100}%` }}
+                  style={{ width: `${(row.away / total) * 100}%` }}
                 />
               </div>
             </div>

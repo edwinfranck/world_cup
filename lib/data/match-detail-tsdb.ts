@@ -3,7 +3,26 @@ import type {
   MatchEvent,
   MatchLineups,
   MatchStats,
+  StatRow,
 } from "@/lib/types";
+
+const STAT_LABELS_FR: Record<string, string> = {
+  "shots on goal": "Tirs cadrés",
+  "shots off goal": "Tirs non cadrés",
+  "total shots": "Total tirs",
+  "blocked shots": "Tirs bloqués",
+  "shots insidebox": "Tirs dans la surface",
+  "shots outsidebox": "Tirs hors surface",
+  "ball possession": "Possession (%)",
+  "fouls": "Fautes",
+  "corner kicks": "Corners",
+  "offsides": "Hors-jeu",
+  "yellow cards": "Cartons jaunes",
+  "red cards": "Cartons rouges",
+  "goalkeeper saves": "Arrêts du gardien",
+  "total passes": "Passes",
+  "passes accurate": "Passes réussies",
+};
 
 /**
  * Match detail (goal scorers, cards, subs, lineups, stats) from TheSportsDB,
@@ -154,6 +173,34 @@ export async function fetchStats(
     return Object.keys(stats).length ? stats : undefined;
   } catch {
     return undefined;
+  }
+}
+
+/** All match stats TheSportsDB returns, as generic labeled rows. */
+export async function fetchStatRows(eventId: string): Promise<StatRow[]> {
+  try {
+    const res = await fetch(`${BASE}/lookupeventstats.php?id=${eventId}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { eventstats?: SdbStat[] | null };
+    const rows = data.eventstats ?? [];
+    return rows
+      .map((s): StatRow | null => {
+        const raw = (s.strStat ?? "").trim();
+        if (!raw) return null;
+        const home = Number(s.intHome ?? 0);
+        const away = Number(s.intAway ?? 0);
+        if (Number.isNaN(home) && Number.isNaN(away)) return null;
+        return {
+          label: STAT_LABELS_FR[raw.toLowerCase()] ?? raw,
+          home: home || 0,
+          away: away || 0,
+        };
+      })
+      .filter((r): r is StatRow => r !== null);
+  } catch {
+    return [];
   }
 }
 

@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { withFallback } from "@/lib/data";
-import { fetchMatchDetail, fetchStats } from "@/lib/data/match-detail-tsdb";
+import {
+  fetchMatchDetail,
+  fetchStatRows,
+} from "@/lib/data/match-detail-tsdb";
 import { fetchFifaMatchDetailByTeams } from "@/lib/data/match-detail-fifa";
+import { fetchApiFootballStatRows } from "@/lib/data/match-detail-apifootball";
 
 export const revalidate = 30;
 
@@ -17,7 +21,7 @@ export async function GET(
 
   const teamsKnown = match.home.code !== "?" && match.away.code !== "?";
 
-  // 1) Prefer FIFA's own API (keyless, COMPLETE 26-player lineups + scorers).
+  // 1) FIFA's own API (keyless, COMPLETE lineups w/ photos + scorers + minute).
   if (teamsKnown) {
     try {
       const fifa = await fetchFifaMatchDetailByTeams(
@@ -27,26 +31,47 @@ export async function GET(
       if (fifa) {
         if (fifa.events.length) match.events = fifa.events;
         if (fifa.lineups) match.lineups = fifa.lineups;
+        // FIFA is authoritative for score/status/clock on the detail page.
+        if (fifa.finished) {
+          match.status = "FINISHED";
+        } else if (fifa.live) {
+          match.status = "LIVE";
+          match.clock = fifa.clock;
+        }
+        if (fifa.homeScore !== null) match.homeScore = fifa.homeScore;
+        if (fifa.awayScore !== null) match.awayScore = fifa.awayScore;
       }
     } catch {
-      // ignore — fall through to TheSportsDB
+      // fall through to TheSportsDB
     }
   }
 
-  // 2) Fall back to TheSportsDB for anything FIFA didn't provide.
+  // 2) TheSportsDB fallback for anything FIFA didn't provide + stat bars.
   if (match.providerEventId) {
     try {
       if (!match.events?.length || !match.lineups) {
         const tsdb = await fetchMatchDetail(match.providerEventId);
-        if (!match.events?.length && tsdb.events.length) match.events = tsdb.events;
+        if (!match.events?.length && tsdb.events.length)
+          match.events = tsdb.events;
         if (!match.lineups && tsdb.lineups) match.lineups = tsdb.lineups;
-        if (!match.stats && tsdb.stats) match.stats = tsdb.stats;
-      } else if (!match.stats) {
-        // FIFA covered events+lineups; still grab stat bars from TheSportsDB.
-        match.stats = await fetchStats(match.providerEventId);
       }
+      match.statRows = await fetchStatRows(match.providerEventId);
     } catch {
-      // ignore — base match is enough
+      // base match is enough
+    }
+  }
+
+  // 3) Richer stats via API-Football when a key is configured (possession, etc.).
+  if (teamsKnown) {
+    try {
+      const rich = await fetchApiFootballStatRows(
+        match.home.code,
+        match.away.code,
+        match.utcDate
+      );
+      if (rich.length) match.statRows = rich;
+    } catch {
+      // keep TheSportsDB stats
     }
   }
 

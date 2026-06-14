@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { MapPin, Users } from "lucide-react";
-import { useStadiums } from "@/lib/api";
+import { MapPin, Users, Wind } from "lucide-react";
+import { useStadiums, useWeather } from "@/lib/api";
+import { weatherInfo } from "@/lib/weather";
 import { CardListSkeleton } from "@/components/ui/states";
 
 const COUNTRY_FLAG: Record<string, string> = {
@@ -13,6 +14,8 @@ const COUNTRY_FLAG: Record<string, string> = {
 
 export default function StadiumsPage() {
   const { data, isLoading } = useStadiums();
+  const { data: weatherData } = useWeather();
+  const weather = weatherData?.weather ?? {};
 
   const byCountry = useMemo(() => {
     const stadiums = data?.stadiums ?? [];
@@ -48,7 +51,20 @@ export default function StadiumsPage() {
                     key={s.id}
                     className="rounded-none border border-border bg-surface p-3"
                   >
-                    <div className="text-sm font-bold">{s.name}</div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-sm font-bold">{s.name}</div>
+                      {weather[s.id] && (
+                        <div className="shrink-0 text-right">
+                          <div className="text-sm font-bold">
+                            {weatherInfo(weather[s.id]!.code).emoji}{" "}
+                            {weather[s.id]!.temp}°
+                          </div>
+                          <div className="flex items-center justify-end gap-0.5 text-[10px] text-muted">
+                            <Wind size={9} /> {weather[s.id]!.wind} km/h
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <div className="mt-1 flex items-center gap-1 text-xs text-muted">
                       <MapPin size={12} /> {s.city}
                     </div>

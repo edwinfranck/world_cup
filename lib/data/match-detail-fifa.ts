@@ -107,6 +107,7 @@ interface FifaPlayer {
   PlayerName?: Localized;
   ShortName?: Localized;
   Position?: number;
+  PlayerPicture?: { PictureUrl?: string } | null;
 }
 interface FifaGoal {
   IdPlayer?: string;
@@ -135,6 +136,8 @@ interface FifaTeam {
 interface FifaDetail {
   HomeTeam?: FifaTeam;
   AwayTeam?: FifaTeam;
+  MatchStatus?: number; // 3 = finished
+  MatchTime?: string; // "67'", "90'+4'"
 }
 
 function buildTeamEvents(
@@ -181,12 +184,12 @@ function buildTeamEvents(
 
 function buildTeamLineup(team: FifaTeam): TeamLineup {
   const toPlayer = (p: FifaPlayer): LineupPlayer => ({
-    name:
-      (p.Captain ? "© " : "") +
-      (loc(p.PlayerName) ?? loc(p.ShortName) ?? "—"),
+    name: loc(p.PlayerName) ?? loc(p.ShortName) ?? "—",
     number: p.ShirtNumber != null ? String(p.ShirtNumber) : undefined,
     position: p.Position != null ? POSITION_LABEL[p.Position] : undefined,
     starter: p.Status === 1,
+    captain: !!p.Captain,
+    photo: p.PlayerPicture?.PictureUrl || undefined,
   });
   const players = (team.Players ?? []).map(toPlayer);
   const byPos = (a: LineupPlayer, b: LineupPlayer) =>
@@ -198,10 +201,20 @@ function buildTeamLineup(team: FifaTeam): TeamLineup {
   };
 }
 
+export interface FifaMatchDetail {
+  events: MatchEvent[];
+  lineups?: MatchLineups;
+  clock?: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  finished: boolean;
+  live: boolean;
+}
+
 export async function fetchFifaMatchDetailByTeams(
   homeCode: string,
   awayCode: string
-): Promise<{ events: MatchEvent[]; lineups?: MatchLineups } | null> {
+): Promise<FifaMatchDetail | null> {
   const index = await calendarIndex();
   const ref = index.get(pairKey(homeCode, awayCode));
   if (!ref) return null;
@@ -229,10 +242,21 @@ export async function fetchFifaMatchDetailByTeams(
     home: buildTeamLineup(ourHome),
     away: buildTeamLineup(ourAway),
   };
-
   const hasLineups =
     lineups.home.starters.length > 0 || lineups.away.starters.length > 0;
 
-  if (!events.length && !hasLineups) return null;
-  return { events, lineups: hasLineups ? lineups : undefined };
+  const finished = detail.MatchStatus === 3;
+  const clock = detail.MatchTime || undefined;
+  const live =
+    !finished && !!clock && /\d/.test(clock) && clock !== "0'";
+
+  return {
+    events,
+    lineups: hasLineups ? lineups : undefined,
+    clock,
+    homeScore: ourHome.Score ?? null,
+    awayScore: ourAway.Score ?? null,
+    finished,
+    live,
+  };
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Radio } from "lucide-react";
+import { ChevronRight, Heart, Radio } from "lucide-react";
 import { useMatches, useGroups } from "@/lib/api";
+import { useAppStore, useHydrated } from "@/lib/store";
 import { MatchCard } from "@/components/match-card";
 import { StandingsTable } from "@/components/standings-table";
 import { SectionHeader } from "@/components/ui/card";
@@ -12,8 +13,25 @@ import type { Match } from "@/lib/types";
 export default function DashboardPage() {
   const { data, isLoading } = useMatches();
   const { data: groupsData, isLoading: groupsLoading } = useGroups();
+  const hydrated = useHydrated();
+  const favoriteTeams = useAppStore((s) => s.favoriteTeams);
 
   const matches = data?.matches ?? [];
+  const favMatches =
+    hydrated && favoriteTeams.length
+      ? matches
+          .filter(
+            (m) =>
+              favoriteTeams.includes(m.home.id) ||
+              favoriteTeams.includes(m.away.id)
+          )
+          .sort((a, b) => {
+            const rank = (s: string) =>
+              s === "LIVE" || s === "PAUSED" ? 0 : s === "SCHEDULED" ? 1 : 2;
+            return rank(a.status) - rank(b.status);
+          })
+          .slice(0, 4)
+      : [];
   const live = matches.filter(
     (m) => m.status === "LIVE" || m.status === "PAUSED"
   );
@@ -32,6 +50,27 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 animate-fade-up">
       <Hero liveCount={live.length} />
+
+      {favMatches.length > 0 && (
+        <section>
+          <SectionHeader
+            title="Mes favoris"
+            action={
+              <Link
+                href="/favorites"
+                className="inline-flex items-center text-xs font-semibold text-live"
+              >
+                <Heart size={13} className="mr-1" /> Gérer
+              </Link>
+            }
+          />
+          <div className="space-y-2">
+            {favMatches.map((m) => (
+              <MatchCard key={m.id} match={m} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section>
         <SectionHeader

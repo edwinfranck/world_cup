@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Search, Trophy } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageToggle } from "@/components/language-toggle";
 
 export function TopBar() {
   return (
@@ -22,6 +23,7 @@ export function TopBar() {
           >
             <Search size={18} />
           </Link>
+          <LanguageToggle />
           <ThemeToggle />
         </div>
       </div>

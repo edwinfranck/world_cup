@@ -6,6 +6,7 @@ import { useAppStore, useHydrated } from "@/lib/store";
 import { TeamFlag } from "@/components/team-flag";
 import { FavoriteTeamButton } from "@/components/favorite-button";
 import { MatchCard } from "@/components/match-card";
+import { AddToCalendar } from "@/components/add-to-calendar";
 import { CardListSkeleton, EmptyState } from "@/components/ui/states";
 
 export default function FavoritesPage() {
@@ -34,11 +35,14 @@ export default function FavoritesPage() {
     <div className="space-y-5 animate-fade-up">
       <header>
         <h1 className="text-xl font-extrabold">Mes favoris</h1>
-        <p className="text-sm text-muted">Vos équipes et matchs suivis.</p>
+        <p className="text-sm text-muted">
+          Vos favoris remontent leurs matchs en haut de l&apos;accueil, sont mis
+          en avant ici, et servent au parcours du simulateur.
+        </p>
       </header>
 
       {empty ? (
-        <EmptyState message="Aucun favori. Touchez le ❤ sur une équipe ou un match." />
+        <EmptyState message="Aucun favori. Touchez le ❤ sur une équipe (page Équipes) ou un match." />
       ) : (
         <>
           {teams.length > 0 && (
@@ -75,7 +79,14 @@ export default function FavoritesPage() {
               </h2>
               <div className="space-y-2">
                 {matches.map((m) => (
-                  <MatchCard key={m.id} match={m} />
+                  <div key={m.id} className="flex items-stretch gap-2">
+                    <div className="min-w-0 flex-1">
+                      <MatchCard match={m} />
+                    </div>
+                    <div className="flex items-center">
+                      <AddToCalendar match={m} />
+                    </div>
+                  </div>
                 ))}
               </div>
             </section>

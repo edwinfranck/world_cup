@@ -69,3 +69,18 @@ export function useStadiums() {
     staleTime: Infinity,
   });
 }
+
+export interface Weather {
+  temp: number;
+  code: number;
+  wind: number;
+}
+
+export function useWeather() {
+  return useQuery({
+    queryKey: ["weather"],
+    queryFn: () =>
+      get<{ weather: Record<string, Weather | null> }>("/api/weather"),
+    staleTime: 30 * 60 * 1000,
+  });
+}

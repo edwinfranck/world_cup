@@ -8,7 +8,7 @@ function StatusPill({ match }: { match: Match }) {
     return (
       <span className="inline-flex items-center gap-1 rounded-none bg-live/15 px-1.5 py-0.5 text-[11px] font-bold text-live">
         <span className="h-1.5 w-1.5 rounded-none bg-live animate-pulse-live" />
-        {match.minute ? `${match.minute}'` : "LIVE"}
+        {match.clock || (match.minute ? `${match.minute}'` : "LIVE")}
       </span>
     );
   }
