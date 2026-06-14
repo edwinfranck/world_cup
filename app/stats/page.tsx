@@ -113,10 +113,6 @@ export default function StatsPage() {
         </section>
       )}
 
-      <p className="rounded-none border border-dashed border-border bg-surface/50 p-4 text-center text-xs text-muted">
-        Les stats avancées (xG, possession, buteurs individuels) arriveront via
-        un fournisseur de données connecté.
-      </p>
     </div>
   );
 }
